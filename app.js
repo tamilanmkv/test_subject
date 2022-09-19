@@ -3,6 +3,13 @@ const stealth = require('puppeteer-extra-plugin-stealth');
 const BeautifulSoup = require('jssoup').default;
 const fs = require('fs');
 
+
+let massLinks = new Set();
+let urlLess = new Set();
+let TempLinks = new Set();
+let thirdParty = new Set();
+
+
 const saveFile = (filename,data) => fs.appendFileSync(filename,data);
 
 const browser = async() => {
@@ -29,41 +36,87 @@ const browser = async() => {
 const getHtml = (htmlSource) => new BeautifulSoup(htmlSource); 
 
 const aTag =  (Soup) => Soup.findAll('a',{href:true});
+const formTage = (soup) => soup.findAll('form');
+const inputTag = (soup) => soup.findAll('input');
 
-const monsterLoop = async (urls,page,browse) => {
-        urls.map(async (url) => {
-            await page.goto(url);
-            await page.waitForTimeout(1000);
-            const htmlSource = await page.content();
-            const Soup = getHtml(htmlSource);
-            const aTags = aTag(Soup);
-            aTags.map((aTag) => {
-                const href = aTag.attrs.href;
-                console.log(href);
-            });
-            await page.close();
+const masterMind = async (url,page) => {
+    try{
+        await page.goto(url);
+    }catch(e){
+        console.log("Error on page : ",url)
+    }
+        await page.waitForTimeout(1000);
+    let htmlSource = await page.content();
+    let Soup = getHtml(htmlSource);
+    aTag(Soup)
+        .map((aTag) => {
+            TempLinks.add(aTag.attrs.href);
     });
-    browse.close();
+    return Soup;
 }
-let massLinks = new Set();
-let urlLess = new Set();
+
+const TempUrl = () => {
+    try{
+        (massLinks.has(url))
+                ?TempLinks.delete(url)
+                :massLinks.add(url);
+    }catch(e){
+        console.log(e);
+    }
+}
+
+const kingUrl = (kingDomain) => {
+    for(let url of TempLinks) {
+            if (url.includes(kingDomain)) {
+                massLinks.add(url);
+        } 
+        else if (url.startsWith('/')) {
+            massLinks.add("https://" + kingDomain + url);
+        }
+        else {
+            massLinks.delete(url);
+            thirdParty.add(url);
+        }
+        if (thirdParty.has(url)){
+                thirdParty.delete("https://" + kingDomain + url)
+        }
+    }
+
+    return massLinks;
+}
+
+const print = (...value) => console.log(value.join(''));
+
+const monsterLoop = async (page,browse,kingDomain) => {
+    let Temp = new Set();
+    await TempUrl();
+    await kingUrl(kingDomain);
+    console.log("TempUrs :",TempLinks);
+    console.log("Master Links: ",massLinks);
+    console.log("Third party: ",thirdParty);
+    for (let url of TempLinks) {
+        let Soup = await masterMind(url,page);
+        saveFile("forms.txt",formTage(Soup)+"\n");
+        saveFile("inputs.txt",inputTag(Soup)+"\n");
+        
+    }
+    
+    console.log(tempStore)
+    //return await monsterLoop(FilterUrl,page,browse);
+}
+
+ 
+
 (async (url) =>{
-    
-    //get the page and browser from browser function
     const [page,browse] =await browser();
-    const response = await page.goto(url);
-    const htmlSource = await page.content();
-    const Soup = getHtml(htmlSource);
-    let links = aTag(Soup);
-    links
-        .map((link) => 
-            (link.attrs.href.startsWith("http")) 
-                ?massLinks.add(link.attrs.href)
-                :urlLess.add(url+link.attrs.href)
-            );
+    const Soup = await masterMind(url,page);
     
-    let ma = ['https://www.hackerone.com/terms','https://www.hackerone.com/privacy','https://www.hackerone.com/security']
-    monsterLoop(ma,page,browse);
-   
+    const kingDomain = new URL(url).hostname;
+    kingUrl(kingDomain);
+    console.log(massLinks);
+    await monsterLoop(page,browse,kingDomain);
+    saveFile("links.json",JSON.stringify(massLinks));
+    console.log("Save Complete");
+    // browse.close();
 })("https://www.hackerone.com");
 

@@ -40,7 +40,8 @@ const getHtml = (htmlSource) => new BeautifulSoup(htmlSource);
 const aTag =  (Soup) => Soup.findAll('a',{href:true});
 const formTage = (soup) => soup.findAll('form').join("\n");
 const inputTag = (soup) => soup.findAll('input').join("\n");
-
+const scriptTags = (soup) => soup.findAll('script').join("\n");
+const commentTags = (soup) => soup.findAll('comment').join("\n");
 const TempUrl = (url,kingDomain) => {
     const smallMan = (url) => (massLinks.has(url))?"": massLinks.add(url);TempLinks.add(url);
     try{
@@ -123,31 +124,24 @@ const monsterLoop = async (page,browse,kingDomain) => {
     for (let url of Temp) {
         let Soup = await masterMind(url,page,kingDomain);
         executedUrl.add(url);
-        console.log("Mass :",massLinks);
-        console.log("Temp :",TempLinks);
-        saveFile("forms.txt",formTage(Soup)+"\n");
-        saveFile("inputs.txt",inputTag(Soup)+"\n");
+        saveFile("forms.txt",url + formTage(Soup)+"\n");
+        saveFile("inputs.txt",url + inputTag(Soup)+"\n");
+        saveFile("scripts.txt",url + scriptTags(Soup)+"\n");
         console.log("size of temp: ",TempLinks.size);
         console.log("size of mass: ",massLinks.size);
         console.log("size of temp mass: ",Temp.size);
     }
-    console.log("executer: ",executedUrl);
-    console.log("thirdParty: ",thirdParty);
-    console.log("mailto: ",mailtoTemp);
     saveFile("links.json",massLinks);
     count += 1;
     console.log(count)
-    if ( count <= 2){
+    if ( count <= 1 ){
         return soBegin(page,browse,kingDomain,executedUrl);
     }else{
         console.log("Done");
         return browse.close();
     }
 }
-        // return monsterLoop(links,page,browse);
 
-
- 
 
 (async (url) =>{
     let kingDomain = new URL(url).hostname;

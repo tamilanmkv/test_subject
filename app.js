@@ -103,6 +103,7 @@ const masterMind = async (url,page,kingDomain) => {
     return Soup;
 }
 
+
 const soBegin = (page,browse,kingDomain,executeUrl) => {
     
     TempLinks.forEach((url) => {
@@ -131,12 +132,13 @@ const monsterLoop = async (page,browse,kingDomain) => {
         console.log("size of mass: ",massLinks.size);
         console.log("size of temp mass: ",Temp.size);
     }
-    saveFile("links.json",massLinks);
+    
     count += 1;
     console.log(count)
-    if ( count <= 1 ){
+    if ( count >= 1 ){
         return soBegin(page,browse,kingDomain,executedUrl);
-    }else{
+    } else {
+        saveFile("links.json",JSON.stringify([...massLinks]));
         console.log("Done");
         return browse.close();
     }
